@@ -30,7 +30,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32_it.h"
-#include "timer.h"
+#include "smarttimer.h"
 #include <stdio.h>
 
 
@@ -161,7 +161,7 @@ void PendSV_Handler(void)
 void SysTick_Handler(void)
 {
 
-	  timer_tick();
+	  stim_tick();
 }
 
 /******************************************************************************/

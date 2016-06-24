@@ -408,9 +408,9 @@
               <FilePath>.\app\stm32f10x_conf.h</FilePath>
             </File>
             <File>
-              <FileName>timer.c</FileName>
+              <FileName>smarttimer.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\smarttimer\timer.c</FilePath>
+              <FilePath>..\smarttimer\smarttimer.c</FilePath>
             </File>
           </Files>
         </Group>

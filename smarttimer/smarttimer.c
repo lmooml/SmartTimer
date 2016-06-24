@@ -16,34 +16,34 @@
  * =====================================================================================
  */
 #include <stdlib.h>
-#include "timer.h"
+#include "smarttimer.h"
 #include <string.h>
 #include <stdio.h>
 
 
-struct timer_event{
+struct stim_event{
   uint16_t interval;    
   uint16_t now;         
   uint16_t looptimes;   
   uint8_t addIndex;     
   uint8_t stat;
-  struct timer_event *next;
-  struct timer_event *prev;
+  struct stim_event *next;
+  struct stim_event *prev;
 };
 
-struct timer_event_list{
-  struct timer_event *head;
-  struct timer_event *tail;
+struct stim_event_list{
+  struct stim_event *head;
+  struct stim_event *tail;
   uint8_t count;
 };
 
-static struct timer_event_list event_list; 
-static struct timer_event event_pool[TIMEREVENT_MAX_SIZE];
-static struct timer_event *recycle_list[TIMEREVENT_MAX_SIZE];
+static struct stim_event_list event_list; 
+static struct stim_event event_pool[STIM_EVENT_MAX_SIZE];
+static struct stim_event *recycle_list[STIM_EVENT_MAX_SIZE];
 static uint8_t recycle_count;
 
-static void (*callback_list[TIMEREVENT_MAX_SIZE])(void);
-static uint8_t mark_list[TIMEREVENT_MAX_SIZE];
+static void (*callback_list[STIM_EVENT_MAX_SIZE])(void);
+static uint8_t mark_list[STIM_EVENT_MAX_SIZE];
 
 
 /* 
@@ -54,17 +54,17 @@ static uint8_t mark_list[TIMEREVENT_MAX_SIZE];
  *
  * =====================================================================================
  */
-static struct timer_event* malloc_event (void)
+static struct stim_event* malloc_event (void)
 {
   uint8_t i;
-  for(i = 0; i < TIMEREVENT_MAX_SIZE; i++){
-    if(event_pool[i].stat == TIMER_EVENT_IDLE){
-      event_pool[i].stat = TIMER_EVENT_ACTIVE;
+  for(i = 0; i < STIM_EVENT_MAX_SIZE; i++){
+    if(event_pool[i].stat == STIM_EVENT_IDLE){
+      event_pool[i].stat = STIM_EVENT_ACTIVE;
       return &event_pool[i];
     }
   }
   return NULL;
-}		/* -----  end of static function timer_malloc_event  ----- */
+}		/* -----  end of static function stim_malloc_event  ----- */
 
 
 /* 
@@ -73,29 +73,29 @@ static struct timer_event* malloc_event (void)
  *  Description:  realse event to event_pool
  * =====================================================================================
  */
-static void free_event (struct timer_event *event)
+static void free_event (struct stim_event *event)
 {
 	callback_list[event->addIndex] = NULL;
-	mark_list[event->addIndex] = TIMER_INVALID;
+	mark_list[event->addIndex] = STIM_INVALID;
 
-  event->stat = TIMER_EVENT_IDLE;
+  event->stat = STIM_EVENT_IDLE;
 	event->interval = 0;
 	event->looptimes = 0;
 	event->next = NULL;
 	event->now = 0;
 	event->prev = NULL;
 
-}		/* -----  end of static function timer_free_event  ----- */
+}		/* -----  end of static function stim_free_event  ----- */
 
 /*
  * ===  FUNCTION  ======================================================================
  *         Name:  push_event
- *  Description:  push a timer_event to event linked list.
+ *  Description:  push a stim_event to event linked list.
  * =====================================================================================
  */
-static struct timer_event* push_event ( uint16_t delayms, void (*callback)(void),uint16_t times )
+static struct stim_event* push_event ( uint16_t delayms, void (*callback)(void),uint16_t times )
 {
-  struct timer_event *event;
+  struct stim_event *event;
 
   event = malloc_event();
   event->interval = delayms;
@@ -121,7 +121,7 @@ static struct timer_event* push_event ( uint16_t delayms, void (*callback)(void)
 
   event_list.count++;
   return event;
-}		/* -----  end of static function timer_push_delay_event  ----- */
+}		/* -----  end of static function stim_push_delay_event  ----- */
 
 
 
@@ -131,7 +131,7 @@ static struct timer_event* push_event ( uint16_t delayms, void (*callback)(void)
  *  Description:  pop a timer event from event linked list.
  * =====================================================================================
  */
-static void pop_event ( struct timer_event *event )
+static void pop_event ( struct stim_event *event )
 {
   if(event_list.head == event){
     event_list.head = NULL;
@@ -147,7 +147,7 @@ static void pop_event ( struct timer_event *event )
   free_event(event);
 
   event_list.count--;
-}		/* -----  end of static function timer_pop_delay_event  ----- */
+}		/* -----  end of static function stim_pop_delay_event  ----- */
 
 
 
@@ -155,77 +155,77 @@ static void pop_event ( struct timer_event *event )
 /*
  *
  * ===  FUNCTION  ======================================================================
- *         Name:  timer_delay
+ *         Name:  stim_delay
  *  Description:  wait some milliseconds.It will blocking process until time out.
  * =====================================================================================
  */
-void timer_delay ( uint16_t delayms)
+void stim_delay ( uint16_t delayms)
 {
 
-  struct timer_event *event;
+  struct stim_event *event;
   __ASM("CPSID  I");  
   event = push_event(delayms,NULL,1);
   __ASM("CPSIE  I"); 
   while(event->now < event->interval);
-}		/* -----  end of function timer_delay  ----- */
+}		/* -----  end of function stim_delay  ----- */
 
 
 
 
 /*
  * ===  FUNCTION  ======================================================================
- *         Name:  timer_runlater
+ *         Name:  stim_runlater
  *  Description:  run callback function after some milliseconds by asynchronous.
  * =====================================================================================
  */
-void timer_runlater ( uint16_t delayms, void (*callback)(void))
+void stim_runlater ( uint16_t delayms, void (*callback)(void))
 {
   __ASM("CPSID  I"); 
   push_event(delayms,callback,1);
   __ASM("CPSIE  I"); 
-}		/* -----  end of function timer_runlater  ----- */
+}		/* -----  end of function stim_runlater  ----- */
 /*
  * ===  FUNCTION  ======================================================================
- *         Name:  timer_loop
+ *         Name:  stim_loop
  *  Description:  looping callback function each interval by asynchronous.
  * =====================================================================================
  */
-void timer_loop ( uint16_t delayms, void (*callback)(void), uint16_t times)
+void stim_loop ( uint16_t delayms, void (*callback)(void), uint16_t times)
 {
   __ASM("CPSID  I"); 
   push_event(delayms,callback,times);
   __ASM("CPSIE  I"); 
-}		/* -----  end of function timer_loop  ----- */
+}		/* -----  end of function stim_loop  ----- */
 
 
 
 
 /*
  * ===  FUNCTION  ======================================================================
- *         Name:  timer_tick
+ *         Name:  stim_tick
  *  Description:  engine of timer.
  *                It must be execute in systick( or hardware timer) interrupt
  * =====================================================================================
  */
-void timer_tick (void)
+void stim_tick (void)
 {
-  struct timer_event *tmp;
+  struct stim_event *tmp;
   if (event_list.count == 0)
     return;
 
   tmp = event_list.head;
 	
   while(tmp != NULL){
-    if(tmp->stat != TIMER_EVENT_ACTIVE){
+    if(tmp->stat != STIM_EVENT_ACTIVE){
 			tmp = tmp->next;
       continue;
     }
     
     if(tmp->now == tmp->interval){
       mark_list[tmp->addIndex] += 1;
-			if((tmp->looptimes != TIMER_LOOP_FOREVER) && 
+			if((tmp->looptimes != STIM_LOOP_FOREVER) && 
 				(--tmp->looptimes == 0)){
-				tmp->stat = TIMER_EVENT_RECYCLE;
+				tmp->stat = STIM_EVENT_RECYCLE;
 				recycle_count++;
 			}
       tmp->now = 0;
@@ -234,22 +234,22 @@ void timer_tick (void)
     tmp->now++;
     tmp = tmp->next;
   }
-}		/* -----  end of function timer_dispach  ----- */
+}		/* -----  end of function stim_dispach  ----- */
 
 
 /* 
  * ===  FUNCTION  ======================================================================
- *         Name:  timer_mainloop
+ *         Name:  stim_mainloop
  *  Description:  checkout mark_list,and execute callback funtion if mark be setted.
  *                this function must be execute by while loop in main.c
  * =====================================================================================
  */
-void timer_mainloop ( void )
+void stim_mainloop ( void )
 {
   uint8_t i;
   
-  for(i = 0; i < TIMEREVENT_MAX_SIZE; i++){
-    if((mark_list[i] != TIMER_INVALID) && (mark_list[i] > 0)){
+  for(i = 0; i < STIM_EVENT_MAX_SIZE; i++){
+    if((mark_list[i] != STIM_INVALID) && (mark_list[i] > 0)){
       if(callback_list[i] != NULL){
         callback_list[i]();
       }
@@ -258,7 +258,7 @@ void timer_mainloop ( void )
   }
 
   if(recycle_count > 0){
-    for(i = 0; i < TIMEREVENT_MAX_SIZE; i++){
+    for(i = 0; i < STIM_EVENT_MAX_SIZE; i++){
       if(recycle_list[i] != NULL){
         pop_event(recycle_list[i]);
         recycle_count--;
@@ -267,25 +267,25 @@ void timer_mainloop ( void )
     }
   }
 
-}		/* -----  end of function timer_loop  ----- */
+}		/* -----  end of function stim_loop  ----- */
 
 /*
  * ===  FUNCTION  ======================================================================
- *         Name:  timer_init
+ *         Name:  stim_init
  *  Description:  timer init program.  Init event linked list,and setup system clock.
  * =====================================================================================
  */
-void timer_init ( void )
+void stim_init ( void )
 {
   uint8_t i;
-  struct timer_event *event;
+  struct stim_event *event;
   event_list.head = NULL;
   event_list.tail = NULL;
   event_list.count = 0;
 
-  for(i = 0; i < TIMEREVENT_MAX_SIZE; i++){
+  for(i = 0; i < STIM_EVENT_MAX_SIZE; i++){
     event = &event_pool[i];
-    event->stat = TIMER_EVENT_IDLE;
+    event->stat = STIM_EVENT_IDLE;
     event->interval = 0;
     event->looptimes = 0;
     event->next = NULL;
@@ -294,16 +294,16 @@ void timer_init ( void )
     event->addIndex = i;
 
     callback_list[i] = NULL;
-    mark_list[i] = TIMER_INVALID;
+    mark_list[i] = STIM_INVALID;
   }
 
   recycle_count = 0;
 
   SysTick_Config(SystemCoreClock / 100);     //tick is 10ms
 
-}		/* -----  end of function timer_init  ----- */
+}		/* -----  end of function stim_init  ----- */
 
 
-uint8_t timer_get_eventnum(void){
+uint8_t stim_get_eventnum(void){
   return event_list.count;  
 }

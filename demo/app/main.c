@@ -20,7 +20,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "board.h"
-#include "timer.h"
+#include "smarttimer.h"
 
 
 
@@ -123,7 +123,7 @@ static void sys_init(void)
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
   GPIO_Init(SYS_LEDPORT, &GPIO_InitStructure);
 
-	timer_loop(50,sys_ledflash,TIMER_LOOP_FOREVER);
+	stim_loop(50,sys_ledflash,STIM_LOOP_FOREVER);
 	
 }
 
@@ -139,7 +139,7 @@ static void set_timetick ( void)
 	  m_date.minute = atoi(datestr + 14);
 	  m_date.second = atoi(datestr + 17);
     
-	  timer_loop(100,simulation_rtc,TIMER_LOOP_FOREVER);
+	  stim_loop(100,simulation_rtc,STIM_LOOP_FOREVER);
     
 }		/* -----  end of static function time_tick  ----- */
 
@@ -238,7 +238,7 @@ static void runlater_test(void)
 
    printf("after runlater===>[%02d:%02d:%02d]\r\n",m_date.hour,m_date.minute,m_date.second);
 	 printf("before delay===>[%02d:%02d:%02d]\r\n",m_date.hour,m_date.minute,m_date.second);
-	 timer_delay(1000);
+	 stim_delay(1000);
 	 printf("after delay===>[%02d:%02d:%02d]\r\n",m_date.hour,m_date.minute,m_date.second);
 }
 
@@ -256,16 +256,16 @@ int main (void)
 
 
   uart_init();
-	timer_init();
+	stim_init();
   sys_init();
 
   set_timetick();
 
 	printf("before runlater===>[%02d:%02d:%02d]\r\n",m_date.hour,m_date.minute,m_date.second);
-	timer_runlater(1000,runlater_test);
+	stim_runlater(1000,runlater_test);
 
   while(1){
-    timer_mainloop();
+    stim_mainloop();
 		
   };
 
