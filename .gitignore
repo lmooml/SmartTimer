@@ -1,0 +1,4 @@
+demo/obj/
+demo/Jlink*.*
+tags
+cscope.out
