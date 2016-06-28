@@ -1,4 +1,5 @@
-demo/obj/
+demo/Objects
+demo/Listings
 demo/Jlink*.*
 tags
 cscope.out
