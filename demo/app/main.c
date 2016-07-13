@@ -237,9 +237,9 @@ static void runlater_test(void)
 {
 
    printf("after runlater===>[%02d:%02d:%02d]\r\n",m_date.hour,m_date.minute,m_date.second);
-	 printf("before delay===>[%02d:%02d:%02d]\r\n",m_date.hour,m_date.minute,m_date.second);
-	 stim_delay(1000);
-	 printf("after delay===>[%02d:%02d:%02d]\r\n",m_date.hour,m_date.minute,m_date.second);
+//	 printf("before delay===>[%02d:%02d:%02d]\r\n",m_date.hour,m_date.minute,m_date.second);
+//	 stim_delay(1000);
+//	 printf("after delay===>[%02d:%02d:%02d]\r\n",m_date.hour,m_date.minute,m_date.second);
 }
 
 
@@ -253,8 +253,8 @@ static void runlater_test(void)
 int main (void)
 {
   //NVIC_PriorityGroupConfig(NVIC_PriorityGroup_0);
-  uint32_t i;
 
+  uint8_t i = 0;
   uart_init();
 	stim_init();
   sys_init();
@@ -263,7 +263,14 @@ int main (void)
 
 	printf("before runlater===>[%02d:%02d:%02d]\r\n",m_date.hour,m_date.minute,m_date.second);
 	stim_runlater(1000,runlater_test);
-  i=0xfffffff0;
+  i ^= 0x01;
+	printf("i = %X\r\n",i);
+	i^=0x01;
+		printf("i = %X\r\n",i);
+	i^=0x01;
+		printf("i = %X\r\n",i);
+	i^=0x01;
+		printf("i = %X\r\n",i);
   while(1){
     stim_mainloop();
   };
