@@ -253,7 +253,7 @@ static void runlater_test(void)
 int main (void)
 {
   //NVIC_PriorityGroupConfig(NVIC_PriorityGroup_0);
-
+  uint32_t i;
 
   uart_init();
 	stim_init();
@@ -263,10 +263,9 @@ int main (void)
 
 	printf("before runlater===>[%02d:%02d:%02d]\r\n",m_date.hour,m_date.minute,m_date.second);
 	stim_runlater(1000,runlater_test);
-
+  i=0xfffffff0;
   while(1){
     stim_mainloop();
-		
   };
 
 }		/* -----  end of function main  ----- */

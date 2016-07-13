@@ -22,8 +22,8 @@
 
 
 struct stim_event{
-  uint16_t interval;    
-  uint16_t now;         
+  uint32_t tick_punch;         
+  uint32_t interval;    
   uint16_t looptimes;   
   uint8_t addIndex;     
   uint8_t stat;
@@ -37,13 +37,25 @@ struct stim_event_list{
   uint8_t count;
 };
 
-static struct stim_event_list event_list; 
-static struct stim_event event_pool[STIM_EVENT_MAX_SIZE];
-static struct stim_event *recycle_list[STIM_EVENT_MAX_SIZE];
-static uint8_t recycle_count;
+struct stim_recyle{
+  struct stim_event *recycle_list[STIM_EVENT_MAX_SIZE];
+  uint8_t recycle_count;
+}
 
+struct stim_event_list_manager{
+  struct stim_event_list list[2]; 
+  uint8_t cur_index;
+}
+
+
+static struct stim_event event_pool[STIM_EVENT_MAX_SIZE];
+static struct stim_event_list_manager list_manager;
+
+static struct stim_recyle recycler;
 static void (*callback_list[STIM_EVENT_MAX_SIZE])(void);
 static uint8_t mark_list[STIM_EVENT_MAX_SIZE];
+
+static uint32_t current_tick = 0;
 
 
 /* 
@@ -81,45 +93,85 @@ static void free_event (struct stim_event *event)
   event->stat = STIM_EVENT_IDLE;
 	event->interval = 0;
 	event->looptimes = 0;
-	event->next = NULL;
-	event->now = 0;
+	event->tick_punch = 0;
 	event->prev = NULL;
+	event->next = NULL;
 
 }		/* -----  end of static function stim_free_event  ----- */
 
+
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  insert_event
+ *  Description:  
+ * =====================================================================================
+ */
+static void insert_event ( struct stim_event *event ,uint8_t index)
+{
+  uint8_t i;
+  struct stim_event_list *list = list_manager.list[index];
+  struct stim_event *node = list->head;
+
+  if(node == NULL){
+    //event linked is empty.insert event to linked head and init linked tail 
+    list->head = event;
+    list->tail = event;
+    event->next = NULL;
+    event->prev = NULL;
+  }else{
+    //compare tick_punch with each node in linked 
+    for(i = 0; i < list->node_count; i++){
+      if(event.tick_punch > node.tick_punch){
+        node = node->next;
+      }else{
+        break;
+      }
+    }
+
+    if(node != NULL){
+      //insert event into linked middle
+      event->prev = node.prev;
+      event->next = node;
+      node->prev = event;
+    }else{
+      //insert event into linked tail
+      node = list->tail;
+      node->next = event;
+      event->prev = node;
+      event->next = NULL;
+      list->tail = event;
+    }
+  }
+
+  list->node_count++;
+}		/* -----  end of static function insert_event  ----- */
 /*
  * ===  FUNCTION  ======================================================================
  *         Name:  push_event
  *  Description:  push a stim_event to event linked list.
  * =====================================================================================
  */
-static struct stim_event* push_event ( uint16_t delayms, void (*callback)(void),uint16_t times )
+static struct stim_event* push_event ( uint32_t delayms, void (*callback)(void),uint16_t times )
 {
   struct stim_event *event;
 
   event = malloc_event();
   event->interval = delayms;
-  event->now = 0;
   event->looptimes = times;
   event->next = NULL;
+  event->tick_punch = current_tick + delayms;
 
   mark_list[event->addIndex] = 0;
-
-	if(callback != NULL){
+  if(callback != NULL){
     callback_list[event->addIndex] = callback;
   }
 
-  
-  if(event_list.head == NULL){
-    event_list.head = event;
-    event_list.tail = event;
+  if(event->tick_punch < current_tick){
+    insert_event(event,list_manager.cur_index ^ 0x01);
   }else{
-    event_list.tail->next = event;
-		event->prev = event_list.tail;
-    event_list.tail = event;
+    insert_event(event,list_manager.cur_index);
   }
 
-  event_list.count++;
   return event;
 }		/* -----  end of static function stim_push_delay_event  ----- */
 
@@ -133,20 +185,20 @@ static struct stim_event* push_event ( uint16_t delayms, void (*callback)(void),
  */
 static void pop_event ( struct stim_event *event )
 {
-  if(event_list.head == event){
-    event_list.head = NULL;
-    event_list.tail = NULL;
-  } else if (event_list.tail == event){
-    event_list.tail = event->prev;
-		event_list.tail->next = NULL;
-  }else {
+  struct stim_event_list *list;
+  list = list_manager.list[list_manager.cur_index];
+
+  if(event.prev == NULL){
+    list->head = NULL;
+  }else if(event.next == NULL){
+    event.prev.next = NULL;
+  }else{
     event->prev->next = event->next;
     event->next->prev = event->prev;
   }
 
   free_event(event);
-
-  event_list.count--;
+  list->count--;
 }		/* -----  end of static function stim_pop_delay_event  ----- */
 
 
@@ -166,7 +218,7 @@ void stim_delay ( uint16_t delayms)
   __ASM("CPSID  I");  
   event = push_event(delayms,NULL,1);
   __ASM("CPSIE  I"); 
-  while(event->now < event->interval);
+  while(event->tick < event->interval);
 }		/* -----  end of function stim_delay  ----- */
 
 
@@ -199,6 +251,20 @@ void stim_loop ( uint16_t delayms, void (*callback)(void), uint16_t times)
 
 
 
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  recyle_event
+ *  Description:  
+ * =====================================================================================
+ */
+static void recyle_event ( struct stim_event *event ,struct stim_event_list *list)
+{
+  struct stim_event *node;
+
+  
+  recycler.recycle_count++;
+}		/* -----  end of static function recyle_event  ----- */
+
 
 /*
  * ===  FUNCTION  ======================================================================
@@ -209,31 +275,43 @@ void stim_loop ( uint16_t delayms, void (*callback)(void), uint16_t times)
  */
 void stim_tick (void)
 {
-  struct stim_event *tmp;
-  if (event_list.count == 0)
-    return;
+  struct stim_event *event,*tmp;
 
-  tmp = event_list.head;
-	
+  if(current_tick + 1 < current_tick){
+    list_manager.cur_index ^= 0x01;
+  }
+  current_tick++;
+
+  event = list_manager.list[list_manager.cur_index].head;
+  if(event.tick_punch <= current_tick){
+    mark_list[event->addIndex] += 1;
+    if((event->looptimes != STIM_LOOP_FOREVER) && 
+        (--event->looptimes == 0)){
+      event->stat = STIM_EVENT_RECYCLE;
+      recyle_event(event);
+    }else{
+      event->tick_punch = current_tick + interval;
+    }
+
+  }else{
+
+  }
+
   while(tmp != NULL){
     if(tmp->stat != STIM_EVENT_ACTIVE){
-			tmp = tmp->next;
+      tmp = tmp->next;
       continue;
     }
-    
-    if(tmp->now == tmp->interval){
+
+    if(tmp->tick == tmp->interval){
       mark_list[tmp->addIndex] += 1;
-			if((tmp->looptimes != STIM_LOOP_FOREVER) && 
-				(--tmp->looptimes == 0)){
-				tmp->stat = STIM_EVENT_RECYCLE;
-				recycle_count++;
-			}
-      tmp->now = 0;
     }
 
-    tmp->now++;
+    tmp->tick++;
     tmp = tmp->next;
   }
+
+
 }		/* -----  end of function stim_dispach  ----- */
 
 
@@ -247,7 +325,7 @@ void stim_tick (void)
 void stim_mainloop ( void )
 {
   uint8_t i;
-  
+
   for(i = 0; i < STIM_EVENT_MAX_SIZE; i++){
     if((mark_list[i] != STIM_INVALID) && (mark_list[i] > 0)){
       if(callback_list[i] != NULL){
@@ -279,17 +357,22 @@ void stim_init ( void )
 {
   uint8_t i;
   struct stim_event *event;
-  event_list.head = NULL;
-  event_list.tail = NULL;
-  event_list.count = 0;
+
+  list_manager[0].head = NULL;
+  list_manager[0].count = 0;
+  list_manager[1].head = NULL;
+  list_manager[1].count = 0;
+  list_manager.cur_index = 0;
+
+  current_tick = 0;
 
   for(i = 0; i < STIM_EVENT_MAX_SIZE; i++){
     event = &event_pool[i];
     event->stat = STIM_EVENT_IDLE;
     event->interval = 0;
+    event->tick_punch = 0;
     event->looptimes = 0;
     event->next = NULL;
-    event->now = 0;
     event->prev = NULL;
     event->addIndex = i;
 
@@ -297,13 +380,12 @@ void stim_init ( void )
     mark_list[i] = STIM_INVALID;
   }
 
-  recycle_count = 0;
-
+  recycler.recycle_count = 0;
   SysTick_Config(SystemCoreClock / 100);     //tick is 10ms
 
 }		/* -----  end of function stim_init  ----- */
 
 
 uint8_t stim_get_eventnum(void){
-  return event_list.count;  
+  return list_manager[0].count + list_manager[1].count;  
 }

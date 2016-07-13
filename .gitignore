@@ -1,5 +1,6 @@
 demo/Objects
 demo/Listings
 demo/Jlink*.*
+smarttimer/*.swp
 tags
 cscope.out
