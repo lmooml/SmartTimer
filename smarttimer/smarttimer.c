@@ -264,9 +264,9 @@ void stim_delay ( uint16_t delayms)
 {
 
   struct stim_event *event;
-  __ASM("CPSID  I");  
+	CLOSE_INTERRUPT();  
   event = push_event(delayms,NULL,1);
-  __ASM("CPSIE  I"); 
+	OPEN_INTERRUPT();
   while(mark_list[event->addIndex] == 0);
 }		/* -----  end of function stim_delay  ----- */
 
@@ -281,9 +281,9 @@ void stim_delay ( uint16_t delayms)
  */
 void stim_runlater ( uint16_t delayms, void (*callback)(void))
 {
-  __ASM("CPSID  I"); 
+ 	CLOSE_INTERRUPT(); 
   push_event(delayms,callback,1);
-  __ASM("CPSIE  I"); 
+  OPEN_INTERRUPT(); 
 }		/* -----  end of function stim_runlater  ----- */
 /*
  * ===  FUNCTION  ======================================================================
@@ -293,9 +293,9 @@ void stim_runlater ( uint16_t delayms, void (*callback)(void))
  */
 void stim_loop ( uint16_t delayms, void (*callback)(void), uint16_t times)
 {
-  __ASM("CPSID  I"); 
+ 	CLOSE_INTERRUPT();  
   push_event(delayms,callback,times);
-  __ASM("CPSIE  I"); 
+  OPEN_INTERRUPT(); 
 }		/* -----  end of function stim_loop  ----- */
 
 

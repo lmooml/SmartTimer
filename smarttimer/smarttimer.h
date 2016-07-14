@@ -19,13 +19,16 @@
 #define  __SMARTTIMER_H__
 #include "stm32f10x.h"
 
+//#define STIM_DEBUG
+
 
 #ifndef NULL
 #define NULL ((void *)0)
 #endif
 
+#define CLOSE_INTERRUPT()       __ASM("CPSID  I")
+#define OPEN_INTERRUPT()        __ASM("CPSIE  I")  
 
-//#define STIM_DEBUG
 
 #define	STIM_EVENT_MAX_SIZE      20			            /*max size of timer event number  */
 #define STIM_LOOP_FOREVER       (uint16_t)0xffff
