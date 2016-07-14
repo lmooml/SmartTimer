@@ -123,7 +123,7 @@ static void sys_init(void)
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
   GPIO_Init(SYS_LEDPORT, &GPIO_InitStructure);
 
-	stim_loop(50,sys_ledflash,STIM_LOOP_FOREVER);
+	stim_loop(500,sys_ledflash,STIM_LOOP_FOREVER);
 	
 }
 
@@ -139,7 +139,7 @@ static void set_timetick ( void)
 	  m_date.minute = atoi(datestr + 14);
 	  m_date.second = atoi(datestr + 17);
     
-	  stim_loop(100,simulation_rtc,STIM_LOOP_FOREVER);
+	  stim_loop(1000,simulation_rtc,STIM_LOOP_FOREVER);
     
 }		/* -----  end of static function time_tick  ----- */
 
@@ -238,10 +238,9 @@ static void runlater_test(void)
 
    printf("after runlater===>[%02d:%02d:%02d]\r\n",m_date.hour,m_date.minute,m_date.second);
 	 printf("before delay===>[%02d:%02d:%02d]\r\n",m_date.hour,m_date.minute,m_date.second);
-	 stim_delay(1000);
+	 stim_delay(2000);
 	 printf("after delay===>[%02d:%02d:%02d]\r\n",m_date.hour,m_date.minute,m_date.second);
 }
-
 
 
 /*
@@ -263,10 +262,13 @@ int main (void)
 
 	printf("before runlater===>[%02d:%02d:%02d]\r\n",m_date.hour,m_date.minute,m_date.second);
 	stim_runlater(1000,runlater_test);
-
+	
+	#ifdef STIM_DEBUG
+  stim_loop(10000,stim_print_status,STIM_LOOP_FOREVER);
+	#endif
+	
   while(1){
     stim_mainloop();
-		
   };
 
 }		/* -----  end of function main  ----- */

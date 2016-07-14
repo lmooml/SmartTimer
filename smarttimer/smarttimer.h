@@ -1,12 +1,12 @@
 /*
  * =====================================================================================
  *
- *       Filename:  timer.h
+ *       Filename:  smarttimer.h
  *
  *    Description:  
  *
- *        Version:  1.0
- *        Created:  2015/12/3 星期四 上午 10:48:35
+ *        Version:  1.1
+ *        Created:  2016/7/14 星期四 上午 10:48:35
  *       Revision:  none
  *       Compiler:  armcc
  *
@@ -25,6 +25,7 @@
 #endif
 
 
+//#define STIM_DEBUG
 
 #define	STIM_EVENT_MAX_SIZE      20			            /*max size of timer event number  */
 #define STIM_LOOP_FOREVER       (uint16_t)0xffff
@@ -41,6 +42,10 @@ void stim_mainloop ( void );
 void stim_loop ( uint16_t delayms, void (*callback)(void), uint16_t times);
 void stim_runlater ( uint16_t delayms, void (*callback)(void));
 void stim_delay ( uint16_t delayms);
+
+#ifdef STIM_DEBUG
 uint8_t stim_get_eventnum(void);
+void stim_print_status(void);
+#endif
 
 #endif    
