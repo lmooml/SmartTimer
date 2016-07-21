@@ -19,7 +19,7 @@
 #define  __SMARTTIMER_H__
 #include "stm32f10x.h"
 
-//#define STIM_DEBUG
+#define STIM_DEBUG
 
 
 #ifndef NULL
@@ -42,9 +42,11 @@
 void stim_init ( void );
 void stim_tick (void);
 void stim_mainloop ( void );
-void stim_loop ( uint16_t delayms, void (*callback)(void), uint16_t times);
-void stim_runlater ( uint16_t delayms, void (*callback)(void));
+int8_t stim_loop ( uint16_t delayms, void (*callback)(void), uint16_t times);
+int8_t stim_runlater ( uint16_t delayms, void (*callback)(void));
 void stim_delay ( uint16_t delayms);
+void stim_kill_event(int8_t id);
+void stim_remove_event(int8_t id);
 
 #ifdef STIM_DEBUG
 uint8_t stim_get_eventnum(void);

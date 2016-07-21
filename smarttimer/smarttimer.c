@@ -19,14 +19,14 @@
 #include "smarttimer.h"
 
 #ifdef STIM_DEBUG
-  #include <stdio.h>
+#include <stdio.h>
 #endif
 
 struct stim_event{
   uint32_t tick_punch;         
   uint32_t interval;    
   uint32_t looptimes;   
-  uint8_t addIndex;     
+  uint8_t id;     
   uint8_t stat;
   struct stim_event *next;
   struct stim_event *prev;
@@ -172,8 +172,8 @@ static struct stim_event* malloc_event (void)
  */
 static void free_event (struct stim_event *event)
 {
-  callback_list[event->addIndex] = NULL;
-  mark_list[event->addIndex] = STIM_INVALID;
+  callback_list[event->id] = NULL;
+  mark_list[event->id] = STIM_INVALID;
 
   event->stat = STIM_EVENT_IDLE;
   event->interval = 0;
@@ -194,13 +194,13 @@ static void free_event (struct stim_event *event)
 static void insert_event ( struct stim_event *event,struct stim_event_list *list )
 {
   uint8_t i;
-	struct stim_event *node;
-	
+  struct stim_event *node;
+
   if(list->count == 0){
     //insert event to a empty linked
     insert_to_tail(event,list);
   }else{
-		node = list->head;
+    node = list->head;
     for(i = 0; i < list->count; i++){
       if(event->tick_punch > node->tick_punch){
         node = node->next;
@@ -220,83 +220,28 @@ static void insert_event ( struct stim_event *event,struct stim_event_list *list
 }		/* -----  end of static function insert_event  ----- */
 
 
-/*
+
+/* 
  * ===  FUNCTION  ======================================================================
- *         Name:  push_event
- *  Description:  push a stim_event to event linked list.
+ *         Name:  find_event
+ *  Description:  
  * =====================================================================================
  */
-static struct stim_event* push_event ( uint32_t delayms, void (*callback)(void),uint16_t times )
-{
+static struct stim_event* find_event ( int8_t id, struct stim_event_list *list )
+{ 
+	uint8_t i;
   struct stim_event *event;
-
-  event = malloc_event();
-  event->interval = delayms;
-  event->looptimes = times;
-  event->next = NULL;
-  event->tick_punch = current_tick + delayms;
-
-  mark_list[event->addIndex] = 0;
-  if(callback != NULL){
-    callback_list[event->addIndex] = callback;
-  }
-
-  if(event->tick_punch < current_tick){
-    insert_event(event,&list_manager.list[list_manager.cur_index ^ 0x01]);
-  }else{
-    insert_event(event,&list_manager.list[list_manager.cur_index]);
+  event = list->head;
+  for(i = 0; i < list->count; i++){
+    if(event->id == id){
+      break;
+    }else{
+      event = event->next;
+    }
   }
 
   return event;
-}		/* -----  end of static function stim_push_delay_event  ----- */
-
-
-
-
-/*
- *
- * ===  FUNCTION  ======================================================================
- *         Name:  stim_delay
- *  Description:  wait some milliseconds.It will blocking process until time out.
- * =====================================================================================
- */
-void stim_delay ( uint16_t delayms)
-{
-
-  struct stim_event *event;
-	CLOSE_INTERRUPT();  
-  event = push_event(delayms,NULL,1);
-	OPEN_INTERRUPT();
-  while(mark_list[event->addIndex] == 0);
-}		/* -----  end of function stim_delay  ----- */
-
-
-
-
-/*
- * ===  FUNCTION  ======================================================================
- *         Name:  stim_runlater
- *  Description:  run callback function after some milliseconds by asynchronous.
- * =====================================================================================
- */
-void stim_runlater ( uint16_t delayms, void (*callback)(void))
-{
- 	CLOSE_INTERRUPT(); 
-  push_event(delayms,callback,1);
-  OPEN_INTERRUPT(); 
-}		/* -----  end of function stim_runlater  ----- */
-/*
- * ===  FUNCTION  ======================================================================
- *         Name:  stim_loop
- *  Description:  looping callback function each interval by asynchronous.
- * =====================================================================================
- */
-void stim_loop ( uint16_t delayms, void (*callback)(void), uint16_t times)
-{
- 	CLOSE_INTERRUPT();  
-  push_event(delayms,callback,times);
-  OPEN_INTERRUPT(); 
-}		/* -----  end of function stim_loop  ----- */
+}		/* -----  end of static function find_event  ----- */
 
 
 
@@ -315,6 +260,146 @@ static void recyle_event ( struct stim_event *event )
 }		/* -----  end of static function recyle_event  ----- */
 
 
+
+
+
+/*
+ * ===  FUNCTION  ======================================================================
+ *         Name:  push_event
+ *  Description:  push a stim_event to event linked list.
+ * =====================================================================================
+ */
+static struct stim_event* push_event ( uint32_t delayms, void (*callback)(void),uint16_t times )
+{
+  struct stim_event *event;
+
+  event = malloc_event();
+  event->interval = delayms;
+  event->looptimes = times;
+  event->next = NULL;
+  event->tick_punch = current_tick + delayms;
+
+  mark_list[event->id] = 0;
+  if(callback != NULL){
+    callback_list[event->id] = callback;
+  }
+
+  if(event->tick_punch < current_tick){
+    insert_event(event,&list_manager.list[list_manager.cur_index ^ 0x01]);
+  }else{
+    insert_event(event,&list_manager.list[list_manager.cur_index]);
+  }
+
+  return event;
+}		/* -----  end of static function stim_push_delay_event  ----- */
+
+
+/*
+ *
+ * ===  FUNCTION  ======================================================================
+ *         Name:  stim_delay
+ *  Description:  wait some milliseconds.It will blocking process until time out.
+ * =====================================================================================
+ */
+void stim_delay ( uint16_t delayms)
+{
+
+  struct stim_event *event;
+  CLOSE_INTERRUPT();  
+  event = push_event(delayms,NULL,1);
+  OPEN_INTERRUPT();
+  while(mark_list[event->id] == 0);
+}		/* -----  end of function stim_delay  ----- */
+
+
+
+
+/*
+ * ===  FUNCTION  ======================================================================
+ *         Name:  stim_runlater
+ *  Description:  run callback function after some milliseconds by asynchronous.
+ * =====================================================================================
+ */
+int8_t stim_runlater ( uint16_t delayms, void (*callback)(void))
+{
+  struct stim_event *event;
+
+  CLOSE_INTERRUPT(); 
+  event = push_event(delayms,callback,1);
+  OPEN_INTERRUPT(); 
+  return event->id;
+}		/* -----  end of function stim_runlater  ----- */
+/*
+ * ===  FUNCTION  ======================================================================
+ *         Name:  stim_loop
+ *  Description:  looping invok each interval by asynchronous.
+ * =====================================================================================
+ */
+int8_t stim_loop ( uint16_t delayms, void (*callback)(void), uint16_t times)
+{
+  struct stim_event *event;
+
+  CLOSE_INTERRUPT();  
+  event = push_event(delayms,callback,times);
+  OPEN_INTERRUPT(); 
+  return event->id;
+}		/* -----  end of function stim_loop  ----- */
+
+
+
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  stim_kill_event
+ *  Description:  
+ * =====================================================================================
+ */
+void stim_kill_event(int8_t id)
+{
+  uint8_t i;
+  struct stim_event_list *list;
+  struct stim_event *event;
+
+  CLOSE_INTERRUPT();  
+  for(i = 0; i < 2; i++){
+    list = &list_manager.list[i];
+    event = find_event(id,list);
+    if(event != NULL){
+      remove_node(event,list);
+      free_event(event);
+      break;
+    }
+  }
+  OPEN_INTERRUPT(); 
+}
+
+
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  stim_remove_event
+ *  Description:  
+ * =====================================================================================
+ */
+void stim_remove_event(int8_t id)
+{
+  uint8_t i;
+  struct stim_event_list *list;
+  struct stim_event *event;
+
+  CLOSE_INTERRUPT();  
+  for(i = 0; i < 2; i++){
+    list = &list_manager.list[i];
+    event = find_event(id,list);
+    if(event != NULL){
+      event->stat = STIM_EVENT_RECYCLE;
+      recyle_event(event);
+      break;
+    }
+  }
+  OPEN_INTERRUPT(); 
+}
+
+
+
 /*
  * ===  FUNCTION  ======================================================================
  *         Name:  stim_tick
@@ -326,7 +411,7 @@ void stim_tick (void)
 {
   struct stim_event *event;
   struct stim_event_list *list;
-  
+
   if(((current_tick + 1) & 0xffff) < current_tick){
     list_manager.cur_index ^= 0x01;
   }
@@ -336,10 +421,10 @@ void stim_tick (void)
   event = list->head;
 
   while(event != NULL && event->tick_punch <= current_tick){
-    mark_list[event->addIndex] += 1;
-		
-		
-		
+    mark_list[event->id] += 1;
+
+
+
     if((event->looptimes != STIM_LOOP_FOREVER) && 
         (--event->looptimes == 0)){
       event->stat = STIM_EVENT_RECYCLE;
@@ -382,7 +467,7 @@ void stim_mainloop ( void )
   if(recycle_list.count > 0){
     event = recycle_list.head;
     while(event != NULL){
-      if(mark_list[event->addIndex] == 0){
+      if(mark_list[event->id] == 0){
         remove_node(event,&recycle_list);
         free_event(event);
         break;
@@ -423,7 +508,7 @@ void stim_init ( void )
     event->looptimes = 0;
     event->next = NULL;
     event->prev = NULL;
-    event->addIndex = i;
+    event->id = i;
 
     callback_list[i] = NULL;
     mark_list[i] = STIM_INVALID;
@@ -444,44 +529,44 @@ void stim_print_status(void)
   struct stim_event *node;
   struct stim_event_list *list;
 
-	printf("=============================\r\n");
-	printf("current_tick = %X\r\n",current_tick);
-	printf("cur_index = %d\r\n",list_manager.cur_index);
-	list = &list_manager.list[list_manager.cur_index];
-	if(list->count == 0){
+  printf("=============================\r\n");
+  printf("current_tick = %X\r\n",current_tick);
+  printf("cur_index = %d\r\n",list_manager.cur_index);
+  list = &list_manager.list[list_manager.cur_index];
+  if(list->count == 0){
     printf("list is empty!\r\n");
   }else{
     node = list->head;
     for(i = 0; i <list->count; i++){
       printf("event tick_punch = %X\r\n",node->tick_punch);
-      printf("event addIndex = %d\r\n",node->addIndex);
+      printf("event id = %d\r\n",node->id);
       node = node->next;
     }
   }
   printf("========another list===========\r\n");
-	list = &list_manager.list[list_manager.cur_index ^ 0x01];
-	if(list->count == 0){
+  list = &list_manager.list[list_manager.cur_index ^ 0x01];
+  if(list->count == 0){
     printf("list is empty!\r\n");
   }else{
     node = list->head;
     for(i = 0; i <list->count; i++){
       printf("event tick_punch = %X\r\n",node->tick_punch);
-      printf("event addIndex = %d\r\n",node->addIndex);
+      printf("event id = %d\r\n",node->id);
       node = node->next;
     }
   }
   printf("========recycle list===========\r\n");
-	list = &recycle_list;
-	if(list->count == 0){
+  list = &recycle_list;
+  if(list->count == 0){
     printf("list is empty!\r\n");
   }else{
     node = list->head;
     for(i = 0; i <list->count; i++){
-      printf("mark_list[%d] = %d\r\n",node->addIndex,mark_list[node->addIndex]);
+      printf("mark_list[%d] = %d\r\n",node->id,mark_list[node->id]);
       node = node->next;
     }
   }
-	printf("=============================\r\n");
+  printf("=============================\r\n");
 }
 
 #endif

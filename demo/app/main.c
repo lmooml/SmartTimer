@@ -51,7 +51,7 @@ struct date{
 struct date m_date;
 
 const char datestr[] = "2016:06:23#17:16:00";
-
+static int8_t sysled_id;
 
 
 static void sys_ledflash(void);
@@ -112,6 +112,11 @@ static void uart_init (void)
 }		/* -----  end of function bluetooth_init  ----- */
 
 
+static void remove_sysled(void)
+{
+  stim_kill_event(sysled_id);
+}
+
 static void sys_init(void)
 {
   GPIO_InitTypeDef GPIO_InitStructure;
@@ -123,9 +128,11 @@ static void sys_init(void)
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
   GPIO_Init(SYS_LEDPORT, &GPIO_InitStructure);
 
-	stim_loop(500,sys_ledflash,STIM_LOOP_FOREVER);
+	sysled_id = stim_loop(500,sys_ledflash,STIM_LOOP_FOREVER);
+	stim_runlater(20000,remove_sysled);
 	
 }
+
 
 
 static void set_timetick ( void)
@@ -266,7 +273,7 @@ int main (void)
 	#ifdef STIM_DEBUG
   stim_loop(10000,stim_print_status,STIM_LOOP_FOREVER);
 	#endif
-	
+
   while(1){
     stim_mainloop();
   };
