@@ -19,7 +19,7 @@
 #define  __SMARTTIMER_H__
 #include "stm32f10x.h"
 
-#define STIM_DEBUG
+//#define STIM_DEBUG
 
 
 #ifndef NULL
