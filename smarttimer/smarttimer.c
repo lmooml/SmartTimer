@@ -226,6 +226,7 @@ void stim_tick (void)
 			if((tmp->looptimes != STIM_LOOP_FOREVER) && 
 				(--tmp->looptimes == 0)){
 				tmp->stat = STIM_EVENT_RECYCLE;
+				recycle_list[recycle_count] = tmp;
 				recycle_count++;
 			}
       tmp->now = 0;
@@ -247,6 +248,7 @@ void stim_tick (void)
 void stim_mainloop ( void )
 {
   uint8_t i;
+  struct stim_event *tmp;
   
   for(i = 0; i < STIM_EVENT_MAX_SIZE; i++){
     if((mark_list[i] != STIM_INVALID) && (mark_list[i] > 0)){
@@ -259,8 +261,10 @@ void stim_mainloop ( void )
 
   if(recycle_count > 0){
     for(i = 0; i < STIM_EVENT_MAX_SIZE; i++){
-      if(recycle_list[i] != NULL){
-        pop_event(recycle_list[i]);
+      tmp = recycle_list[i];
+      if(tmp != NULL && mark_list[tmp->addIndex] == 0){
+        pop_event(tmp);
+        recycle_list[i] = NULL;
         recycle_count--;
         break;
       }
