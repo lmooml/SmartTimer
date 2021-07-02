@@ -6,7 +6,7 @@
  *    Description:  software timer dispath
  *
  *        Version:  1.1
- *        Created:  2015/7/14 ĞÇÆÚËÄ ÉÏÎç 10:37:39
+ *        Created:  2015/7/14 ÃÃ‡Ã†ÃšÃ‹Ã„ Ã‰ÃÃÃ§ 10:37:39
  *       Revision:  none
  *       Compiler:  armcc
  *
@@ -412,7 +412,7 @@ void stim_tick (void)
   struct stim_event *event;
   struct stim_event_list *list;
 
-  if(((current_tick + 1) & 0xffff) < current_tick){
+  if(((current_tick + 1) & 0xffffffff) < current_tick){
     list_manager.cur_index ^= 0x01;
   }
   current_tick++;
