@@ -251,9 +251,8 @@ static struct stim_event* find_event ( int8_t id, struct stim_event_list *list )
  *  Description:  insert an event which stat is STIM_EVENT_RECYCLE into recycle linked
  * =====================================================================================
  */
-static void recyle_event ( struct stim_event *event )
+static void recyle_event ( struct stim_event *event ,struct stim_event_list *list)
 {
-  struct stim_event_list *list = &list_manager.list[list_manager.cur_index];
 
   remove_node(event,list);
   insert_to_tail(event,&recycle_list);
@@ -391,7 +390,7 @@ void stim_remove_event(int8_t id)
     event = find_event(id,list);
     if(event != NULL){
       event->stat = STIM_EVENT_RECYCLE;
-      recyle_event(event);
+      recyle_event(event,list);
       break;
     }
   }
@@ -428,7 +427,7 @@ void stim_tick (void)
     if((event->looptimes != STIM_LOOP_FOREVER) && 
         (--event->looptimes == 0)){
       event->stat = STIM_EVENT_RECYCLE;
-      recyle_event(event);
+      recyle_event(event,list);
     }else{
       event->tick_punch = current_tick + event->interval;
       remove_node(event,list);
